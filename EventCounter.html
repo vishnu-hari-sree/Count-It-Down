@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Count It Down</title>
+    
+    <link rel="icon" href="images/logo.png" type="image/png">
+
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600&family=Days+One&display=swap" rel="stylesheet">
+
+    <!-- Load React and Babel for JSX -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Chakra Petch', sans-serif;
+            background-color: #0a0a0a;
+        }
+        .font-days-one { font-family: 'Days One', sans-serif; }
+        .font-chakra-petch { font-family: 'Chakra Petch', sans-serif; }
+        
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const calculateTimeLeft = (targetDate) => {
+            if (!targetDate) return {};
+            const difference = +new Date(targetDate) - +new Date();
+            let timeLeft = {};
+            if (difference > 0) {
+                timeLeft = {
+                    hours: Math.floor(difference / (1000 * 60 * 60)),
+                    minutes: Math.floor((difference / 1000 / 60) % 60),
+                    seconds: Math.floor((difference / 1000) % 60),
+                };
+            }
+            return timeLeft;
+        };
+
+        const ConfettiParticle = () => {
+            const style = {
+                position: 'absolute',
+                width: `${Math.random() * 8 + 6}px`,
+                height: `${Math.random() * 8 + 6}px`,
+                backgroundColor: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                top: `${-20}px`,
+                left: `${Math.random() * 100}%`,
+                animation: `fall ${Math.random() * 4 + 3}s linear ${Math.random() * 2}s infinite`,
+                borderRadius: '50%',
+                opacity: Math.random() * 0.5 + 0.5,
+            };
+            return <div style={style}></div>;
+        };
+
+        const Countdown = ({ config, setView }) => {
+            const [timeLeft, setTimeLeft] = useState(calculateTimeLeft(config.targetDate));
+            const [isTimeUp, setIsTimeUp] = useState(false);
+
+            useEffect(() => {
+                if (!config.targetDate) return;
+                const timer = setInterval(() => {
+                    const newTimeLeft = calculateTimeLeft(config.targetDate);
+                    setTimeLeft(newTimeLeft);
+                    if (Object.keys(newTimeLeft).length === 0) {
+                        setIsTimeUp(true);
+                        clearInterval(timer);
+                    }
+                }, 1000);
+                if (Object.keys(calculateTimeLeft(config.targetDate)).length === 0) {
+                   setIsTimeUp(true);
+                   clearInterval(timer);
+                }
+                return () => clearInterval(timer);
+            }, [config.targetDate]);
+            
+            // --- THEME LOGIC ---
+            const themeStyles = {
+                light: {
+                    box: 'bg-white/40 border-white/30 backdrop-blur-lg',
+                    text: 'text-gray-800',
+                    timerText: 'text-black'
+                },
+                dark: {
+                    box: 'bg-black/40 border-white/20 backdrop-blur-lg',
+                    text: 'text-white',
+                    timerText: 'text-white'
+                }
+            };
+
+            const currentTheme = themeStyles[config.theme] || themeStyles.dark;
+            
+            // Handle custom theme with inline styles
+            const customBoxStyle = config.theme === 'custom' ? { 
+                backgroundColor: `${config.customColor}66`, // ~40% opacity 
+                borderColor: `${config.customColor}99`, // ~60% opacity
+                backdropFilter: 'blur(16px)'
+            } : {};
+            
+            // Use the selected custom font color
+            const customTextStyle = config.theme === 'custom' ? { color: config.customFontColor } : {};
+            
+            const boxBaseClasses = "rounded-2xl";
+            const timeBoxBaseClasses = `flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 ${boxBaseClasses}`;
+            
+            return (
+                <div 
+                    className="relative w-full h-screen bg-cover bg-center text-white overflow-hidden"
+                    style={{ backgroundImage: `url(${config.banner})` }}
+                >
+                    {isTimeUp && Array.from({ length: 150 }).map((_, i) => <ConfettiParticle key={i} />)}
+                    
+                    <button onClick={() => setView('setup')} className="absolute top-6 left-6 z-20 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+
+                    <div className="w-full h-full flex flex-col items-center justify-center p-4">
+                        <div className="flex flex-col items-center gap-8">
+                            <div 
+                                className={`font-chakra-petch text-2xl sm:text-3xl md:text-4xl font-semibold px-8 py-3 ${boxBaseClasses} ${currentTheme.box}`}
+                                style={config.theme === 'custom' ? customBoxStyle : {}}
+                            >
+                                <span className={currentTheme.text} style={customTextStyle}>{config.title}</span>
+                            </div>
+
+                            <div className="flex gap-4 sm:gap-8">
+                                {isTimeUp ? (
+                                    <div 
+                                        className={`font-chakra-petch text-3xl sm:text-5xl font-bold animate-pulse p-10 ${boxBaseClasses} ${currentTheme.box}`}
+                                        style={config.theme === 'custom' ? customBoxStyle : {}}
+                                    >
+                                        <span className={currentTheme.text} style={customTextStyle}>{config.endText}</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className={`${timeBoxBaseClasses} ${currentTheme.box}`} style={config.theme === 'custom' ? customBoxStyle : {}}>
+                                            <span className={`font-days-one text-5xl md:text-7xl ${currentTheme.timerText}`} style={customTextStyle}>{String(timeLeft.hours || 0).padStart(2, '0')}</span>
+                                            <span className={`font-chakra-petch text-lg uppercase tracking-widest ${currentTheme.text}`} style={customTextStyle}>Hours</span>
+                                        </div>
+                                        <div className={`${timeBoxBaseClasses} ${currentTheme.box}`} style={config.theme === 'custom' ? customBoxStyle : {}}>
+                                            <span className={`font-days-one text-5xl md:text-7xl ${currentTheme.timerText}`} style={customTextStyle}>{String(timeLeft.minutes || 0).padStart(2, '0')}</span>
+                                            <span className={`font-chakra-petch text-lg uppercase tracking-widest ${currentTheme.text}`} style={customTextStyle}>Minutes</span>
+                                        </div>
+                                        <div className={`${timeBoxBaseClasses} ${currentTheme.box}`} style={config.theme === 'custom' ? customBoxStyle : {}}>
+                                            <span className={`font-days-one text-5xl md:text-7xl ${currentTheme.timerText}`} style={customTextStyle}>{String(timeLeft.seconds || 0).padStart(2, '0')}</span>
+                                            <span className={`font-chakra-petch text-lg uppercase tracking-widest ${currentTheme.text}`} style={customTextStyle}>Seconds</span>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const SetupForm = ({ setConfig, setView }) => {
+            const [banner, setBanner] = useState(null);
+            const [title, setTitle] = useState("Something Big is Coming");
+            const [endText, setEndText] = useState("The event has started!");
+            const [targetDate, setTargetDate] = useState('');
+            const [theme, setTheme] = useState('dark');
+            const [customColor, setCustomColor] = useState('#4a90e2');
+            const [customFontColor, setCustomFontColor] = useState('#ffffff'); // New state for font color
+            const [error, setError] = useState('');
+
+            const handleBannerChange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Create a canvas to crop the image
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const targetAspectRatio = 16 / 9;
+
+                        // Set canvas dimensions to a high-quality 16:9 resolution
+                        canvas.width = 1920;
+                        canvas.height = 1080;
+
+                        let sourceX = 0;
+                        let sourceY = 0;
+                        let sourceWidth = img.width;
+                        let sourceHeight = img.height;
+                        const currentAspectRatio = img.width / img.height;
+
+                        // Calculate cropping dimensions
+                        if (currentAspectRatio > targetAspectRatio) {
+                            // Image is wider than 16:9, crop the sides
+                            sourceWidth = img.height * targetAspectRatio;
+                            sourceX = (img.width - sourceWidth) / 2;
+                        } else {
+                            // Image is taller than 16:9, crop the top and bottom
+                            sourceHeight = img.width / targetAspectRatio;
+                            sourceY = (img.height - sourceHeight) / 2;
+                        }
+
+                        // Draw the cropped image onto the canvas
+                        ctx.drawImage(
+                            img,
+                            sourceX,
+                            sourceY,
+                            sourceWidth,
+                            sourceHeight,
+                            0, // destinationX
+                            0, // destinationY
+                            canvas.width, // destinationWidth
+                            canvas.height // destinationHeight
+                        );
+
+                        // Get the cropped image as a data URL and update the state
+                        const croppedImageDataUrl = canvas.toDataURL('image/jpeg', 0.9); // Use JPEG for better compression
+                        setBanner(croppedImageDataUrl);
+                        setError('');
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!banner || !targetDate) {
+                    setError('Please fill all fields, including the banner and date.');
+                    return;
+                }
+                setConfig({ banner, title, endText, targetDate, theme, customColor, customFontColor });
+                setView('countdown');
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4 relative">
+                     <button onClick={() => setView('landing')} className="absolute top-6 left-6 z-20 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <div className="w-full max-w-2xl bg-gray-800 p-8 rounded-2xl shadow-lg">
+                        <h2 className="font-days-one text-3xl font-bold text-center mb-6">Setup Your Event</h2>
+                        {error && <div className="bg-red-500 text-white p-3 rounded-lg mb-4 text-center">{error}</div>}
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div>
+                                <label className="block mb-2 font-semibold text-gray-300">Event Banner (16:9 Recommended)</label>
+                                <input type="file" accept="image/*" onChange={handleBannerChange} required className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"/>
+                                {banner && <img src={banner} alt="Banner Preview" className="mt-4 rounded-lg aspect-video object-cover" />}
+                            </div>
+                            <div>
+                                <label htmlFor="title" className="block mb-2 font-semibold text-gray-300">Countdown Title</label>
+                                <input type="text" id="title" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-violet-500 focus:ring focus:ring-violet-500 focus:ring-opacity-50" />
+                            </div>
+                            <div>
+                                <label htmlFor="endText" className="block mb-2 font-semibold text-gray-300">Text After Countdown Ends</label>
+                                <input type="text" id="endText" value={endText} onChange={(e) => setEndText(e.target.value)} className="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-violet-500 focus:ring focus:ring-violet-500 focus:ring-opacity-50" />
+                            </div>
+                            <div>
+                                <label htmlFor="datetime" className="block mb-2 font-semibold text-gray-300">Event Date & Time</label>
+                                <input type="datetime-local" id="datetime" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} required className="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-violet-500 focus:ring focus:ring-violet-500 focus:ring-opacity-50" style={{colorScheme: 'dark'}} />
+                            </div>
+                            {/* --- THEME PICKER UI --- */}
+                            <div>
+                                <label className="block mb-2 font-semibold text-gray-300">Color Theme</label>
+                                <div className="flex flex-wrap gap-4">
+                                    {['light', 'dark', 'custom'].map(t => (
+                                        <label key={t} className="flex items-center space-x-2 cursor-pointer">
+                                            <input type="radio" name="theme" value={t} checked={theme === t} onChange={(e) => setTheme(e.target.value)} className="form-radio h-5 w-5 text-violet-600 bg-gray-700 border-gray-600 focus:ring-violet-500" />
+                                            <span className="capitalize">{t}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            {theme === 'custom' && (
+                                <div className="grid grid-cols-2 gap-4">
+                                     <div className="flex items-center space-x-2">
+                                        <label htmlFor="customColor" className="font-semibold text-gray-300">BG Color:</label>
+                                        <input type="color" id="customColor" value={customColor} onChange={(e) => setCustomColor(e.target.value)} className="w-16 h-10 p-1 bg-gray-700 border border-gray-600 rounded-lg cursor-pointer" />
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <label htmlFor="customFontColor" className="font-semibold text-gray-300">Font Color:</label>
+                                        <input type="color" id="customFontColor" value={customFontColor} onChange={(e) => setCustomFontColor(e.target.value)} className="w-16 h-10 p-1 bg-gray-700 border border-gray-600 rounded-lg cursor-pointer" />
+                                    </div>
+                                </div>
+                            )}
+                            <button type="submit" className="w-full py-3 px-4 bg-violet-600 hover:bg-violet-700 rounded-lg font-bold text-lg transition-colors duration-300">
+                                Deploy Countdown
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const LandingPage = ({ setView }) => {
+            return (
+                <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-8 flex flex-col items-center">
+                    <div className="text-center max-w-4xl w-full">
+                        <h1 className="font-days-one text-4xl sm:text-6xl font-bold text-violet-400">Event Countdown Display</h1>
+                        <p className="mt-4 text-lg sm:text-xl text-gray-300">Create a stunning, full-screen countdown for your next event. Perfect for displays, projectors, and TVs.</p>
+                        
+                        <div className="mt-12 text-left bg-gray-800 p-6 rounded-2xl">
+                            <h2 className="text-2xl font-bold mb-4 font-days-one">How It Works</h2>
+                            <ol className="list-decimal list-inside space-y-2 text-gray-300">
+                                <li><span className="font-bold text-white">Design Your Banner:</span> Use our guide below to create a 16:9 banner.</li>
+                                <li><span className="font-bold text-white">Set Event Details:</span> Upload your banner, add a title, and set the date.</li>
+                                <li><span className="font-bold text-white">Go Live:</span> Display the countdown on any screen.</li>
+                            </ol>
+                        </div>
+
+                        <div className="mt-12 text-left w-full">
+                            <h2 className="text-2xl font-bold mb-4 text-center font-days-one">Banner Design Guide (16:9)</h2>
+                            <div className="relative aspect-video bg-gray-700 rounded-lg overflow-hidden border-2 border-dashed border-gray-500">
+                                <img src="https://placehold.co/1920x1080/2d3748/e2e8f0?text=Use+a+1920x1080px+(16:9)+Image" className="w-full h-full object-cover" alt="Placeholder banner with resolution guidelines"/>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-8">
+                                    <div className="text-center text-white font-bold px-8 py-3 bg-black/50 border border-white/50 rounded-xl">
+                                        TITLE AREA
+                                    </div>
+                                    <div className="flex gap-8">
+                                        <div className="flex items-center justify-center w-40 h-40 bg-black/50 border border-white/50 rounded-2xl text-white font-bold">TIMER</div>
+                                        <div className="flex items-center justify-center w-40 h-40 bg-black/50 border border-white/50 rounded-2xl text-white font-bold">TIMER</div>
+                                        <div className="flex items-center justify-center w-40 h-40 bg-black/50 border border-white/50 rounded-2xl text-white font-bold">TIMER</div>
+                                    </div>
+                                </div>
+                                <p className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-white bg-black/50 px-2 py-1 rounded">Keep important banner details outside these overlay areas.</p>
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={() => setView('setup')}
+                            className="mt-12 py-4 px-8 bg-violet-600 hover:bg-violet-700 rounded-lg font-bold text-xl transition-all duration-300 transform hover:scale-105"
+                        >
+                            Get Started
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [view, setView] = useState('landing');
+            const [config, setConfig] = useState(null);
+
+            switch (view) {
+                case 'setup':
+                    return <SetupForm setConfig={setConfig} setView={setView} />;
+                case 'countdown':
+                    return <Countdown config={config} setView={setView} />;
+                case 'landing':
+                default:
+                    return <LandingPage setView={setView} />;
+            }
+        };
+
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
+
+    </script>
+</body>
+</html>
